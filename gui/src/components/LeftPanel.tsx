@@ -8,6 +8,7 @@ export function LeftPanel() {
   const deck = useEditor((s) => s.deck);
   const selected = useEditor((s) => s.selected);
   const overrides = useEditor((s) => s.overrides);
+  const layoutCss = useEditor((s) => s.layoutCss);
   const selectSlide = useEditor((s) => s.selectSlide);
   const addSlide = useEditor((s) => s.addSlide);
   const removeSlide = useEditor((s) => s.removeSlide);
@@ -37,7 +38,7 @@ export function LeftPanel() {
                         onClick={() => selectSlide(i)}
                       >
                         <span className="deck-index">{i + 1}</span>
-                        {theme && <SlideFrame doc={buildSlideDoc(theme, s.html, overrides)} width={172} />}
+                        {theme && <SlideFrame doc={buildSlideDoc(theme, s.html, overrides, layoutCss)} width={172} />}
                         <div className="deck-item-bar">
                           <span className="deck-type">{s.label}</span>
                           <span className="deck-actions" onClick={(e) => e.stopPropagation()}>
@@ -62,7 +63,7 @@ export function LeftPanel() {
         <div className="vault-list">
           {theme?.templates.map((t) => (
             <button key={t.id} className="vault-item" onClick={() => addSlide(t)} title={`${t.label} 추가`}>
-              <SlideFrame doc={buildSlideDoc(theme, t.html, overrides)} width={172} />
+              <SlideFrame doc={buildSlideDoc(theme, t.html, overrides, layoutCss)} width={172} />
               <span className="vault-label">{t.label}</span>
             </button>
           ))}

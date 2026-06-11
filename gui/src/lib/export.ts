@@ -18,8 +18,13 @@ function overrideStyle(overrides: Record<string, string>): string {
 
 /** A minimal standalone document containing a single slide (used for offscreen
  *  measurement and for the serverless screenshot pipeline). */
-export function buildSingleDoc(theme: ParsedTheme, slideHtml: string, overrides: Record<string, string> = {}): string {
-  return `<!doctype html><html lang="ko"><head><meta charset="utf-8">${theme.headLinks}<style>${theme.styleCss}\n.slide{transition:none!important}</style>${overrideStyle(
+export function buildSingleDoc(
+  theme: ParsedTheme,
+  slideHtml: string,
+  overrides: Record<string, string> = {},
+  layoutCss = ''
+): string {
+  return `<!doctype html><html lang="ko"><head><meta charset="utf-8">${theme.headLinks}<style>${theme.styleCss}\n.slide{transition:none!important}\n${layoutCss}</style>${overrideStyle(
     overrides
   )}</head><body><div class="deck">${activate(slideHtml)}</div></body></html>`;
 }
@@ -31,25 +36,36 @@ export function buildDeckDoc(
   theme: ParsedTheme,
   deck: DeckSlide[],
   overrides: Record<string, string>,
-  extraHeadHtml = ''
+  extraHeadHtml = '',
+  layoutCss = ''
 ): string {
   const doc = new DOMParser().parseFromString(theme.rawHtml, 'text/html');
   const deckEl = doc.querySelector('.deck');
   if (deckEl) {
     deckEl.innerHTML = deck.map((s, i) => (i === 0 ? activate(s.html) : s.html)).join('\n');
   }
-  const head = doc.head;
-  head.insertAdjacentHTML('beforeend', overrideStyle(overrides) + extraHeadHtml);
+  const layoutBlock = layoutCss ? `<style id="gui-layout">${layoutCss}</style>` : '';
+  doc.head.insertAdjacentHTML('beforeend', overrideStyle(overrides) + layoutBlock + extraHeadHtml);
   return '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
 }
 
-export function exportHtml(theme: ParsedTheme, deck: DeckSlide[], overrides: Record<string, string>) {
-  const html = buildDeckDoc(theme, deck, overrides);
+export function exportHtml(
+  theme: ParsedTheme,
+  deck: DeckSlide[],
+  overrides: Record<string, string>,
+  layoutCss = ''
+) {
+  const html = buildDeckDoc(theme, deck, overrides, '', layoutCss);
   saveAs(new Blob([html], { type: 'text/html;charset=utf-8' }), 'presentation.html');
 }
 
 /** Open a print-ready window that self-triggers the browser's PDF dialog. */
-export async function exportPdf(theme: ParsedTheme, deck: DeckSlide[], overrides: Record<string, string>) {
+export async function exportPdf(
+  theme: ParsedTheme,
+  deck: DeckSlide[],
+  overrides: Record<string, string>,
+  layoutCss = ''
+) {
   let printCss = '';
   try {
     printCss = await (await fetch('/core/pdf-export.css')).text();
@@ -59,7 +75,7 @@ export async function exportPdf(theme: ParsedTheme, deck: DeckSlide[], overrides
   const extra =
     `<style>${printCss}</style>` +
     `<script>window.addEventListener('load',function(){setTimeout(function(){window.print();},400);});</script>`;
-  const html = buildDeckDoc(theme, deck, overrides, extra);
+  const html = buildDeckDoc(theme, deck, overrides, extra, layoutCss);
   const w = window.open('', '_blank');
   if (!w) throw new Error('팝업이 차단되었습니다. 팝업을 허용해주세요.');
   w.document.open();
@@ -86,13 +102,17 @@ const EMU_W = 13.33;
 const EMU_H = 7.5;
 
 /** Render a single slide into an offscreen 1280x720 iframe for measurement. */
-async function renderOffscreen(theme: ParsedTheme, slideHtml: string): Promise<HTMLIFrameElement> {
+async function renderOffscreen(
+  theme: ParsedTheme,
+  slideHtml: string,
+  layoutCss: string
+): Promise<HTMLIFrameElement> {
   const iframe = document.createElement('iframe');
   iframe.style.cssText = 'position:fixed;left:-99999px;top:0;width:1280px;height:720px;border:0;';
   document.body.appendChild(iframe);
   const doc = iframe.contentDocument!;
   doc.open();
-  doc.write(buildSingleDoc(theme, slideHtml));
+  doc.write(buildSingleDoc(theme, slideHtml, {}, layoutCss));
   doc.close();
   // Let layout settle and (best-effort) wait for web fonts.
   await Promise.race([
@@ -102,7 +122,12 @@ async function renderOffscreen(theme: ParsedTheme, slideHtml: string): Promise<H
   return iframe;
 }
 
-export async function exportPptx(theme: ParsedTheme, deck: DeckSlide[], overrides: Record<string, string>) {
+export async function exportPptx(
+  theme: ParsedTheme,
+  deck: DeckSlide[],
+  overrides: Record<string, string>,
+  layoutCss = ''
+) {
   const pptx = new pptxgen();
   pptx.defineLayout({ name: 'MS16x9', width: EMU_W, height: EMU_H });
   pptx.layout = 'MS16x9';
@@ -110,7 +135,7 @@ export async function exportPptx(theme: ParsedTheme, deck: DeckSlide[], override
   const ovColor = (name: string) => overrides[name];
 
   for (const s of deck) {
-    const iframe = await renderOffscreen(theme, s.html);
+    const iframe = await renderOffscreen(theme, s.html, layoutCss);
     const doc = iframe.contentDocument!;
     const slideEl = doc.querySelector('.slide') as HTMLElement;
     const pslide = pptx.addSlide();
@@ -187,14 +212,19 @@ export async function exportPptx(theme: ParsedTheme, deck: DeckSlide[], override
 // "Option B" paths from GUI_PLAN.md §5 and require deployment to Vercel.
 
 /** High-quality PDF rendered by headless Chromium on the server. */
-export async function exportPdfServer(theme: ParsedTheme, deck: DeckSlide[], overrides: Record<string, string>) {
+export async function exportPdfServer(
+  theme: ParsedTheme,
+  deck: DeckSlide[],
+  overrides: Record<string, string>,
+  layoutCss = ''
+) {
   let printCss = '';
   try {
     printCss = await (await fetch('/core/pdf-export.css')).text();
   } catch {
     /* ignore */
   }
-  const html = buildDeckDoc(theme, deck, overrides, `<style>${printCss}</style>`);
+  const html = buildDeckDoc(theme, deck, overrides, `<style>${printCss}</style>`, layoutCss);
   const res = await fetch('/api/export-pdf', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -208,9 +238,10 @@ export async function exportPdfServer(theme: ParsedTheme, deck: DeckSlide[], ove
 export async function exportPptxImagesServer(
   theme: ParsedTheme,
   deck: DeckSlide[],
-  overrides: Record<string, string>
+  overrides: Record<string, string>,
+  layoutCss = ''
 ) {
-  const slides = deck.map((s) => ({ html: buildSingleDoc(theme, s.html, overrides), notes: s.notes }));
+  const slides = deck.map((s) => ({ html: buildSingleDoc(theme, s.html, overrides, layoutCss), notes: s.notes }));
   const res = await fetch('/api/export-pptx-images', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },

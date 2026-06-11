@@ -12,6 +12,7 @@ export function Topbar() {
   const theme = useEditor((s) => s.theme);
   const deck = useEditor((s) => s.deck);
   const overrides = useEditor((s) => s.overrides);
+  const layoutCss = useEditor((s) => s.layoutCss);
   const themeId = useEditor((s) => s.themeId);
   const [busy, setBusy] = useState<string | null>(null);
   const [server, setServer] = useState(false);
@@ -40,14 +41,16 @@ export function Topbar() {
           <input type="checkbox" checked={server} onChange={(e) => setServer(e.target.checked)} />
           서버 렌더
         </label>
-        <button disabled={disabled || !!busy} onClick={() => run('html', () => exportHtml(theme!, deck, overrides))}>
+        <button disabled={disabled || !!busy} onClick={() => run('html', () => exportHtml(theme!, deck, overrides, layoutCss))}>
           {busy === 'html' ? '…' : 'HTML'}
         </button>
         <button
           disabled={disabled || !!busy}
           onClick={() =>
             run('pdf', () =>
-              server ? exportPdfServer(theme!, deck, overrides) : exportPdf(theme!, deck, overrides)
+              server
+                ? exportPdfServer(theme!, deck, overrides, layoutCss)
+                : exportPdf(theme!, deck, overrides, layoutCss)
             )
           }
         >
@@ -58,7 +61,9 @@ export function Topbar() {
           disabled={disabled || !!busy}
           onClick={() =>
             run('pptx', () =>
-              server ? exportPptxImagesServer(theme!, deck, overrides) : exportPptx(theme!, deck, overrides)
+              server
+                ? exportPptxImagesServer(theme!, deck, overrides, layoutCss)
+                : exportPptx(theme!, deck, overrides, layoutCss)
             )
           }
         >

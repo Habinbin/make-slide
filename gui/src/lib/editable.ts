@@ -47,17 +47,25 @@ export function serializeSlide(slide: Element): string {
   return clone.outerHTML;
 }
 
-/** Insert or update a live :root override style block inside a document. */
-export function applyOverrides(doc: Document, overrides: Record<string, string>): void {
-  const id = 'gui-overrides';
+function upsertStyle(doc: Document, id: string): HTMLStyleElement {
   let style = doc.getElementById(id) as HTMLStyleElement | null;
   if (!style) {
     style = doc.createElement('style');
     style.id = id;
     doc.head.appendChild(style);
   }
+  return style;
+}
+
+/** Insert or update a live :root override style block inside a document. */
+export function applyOverrides(doc: Document, overrides: Record<string, string>): void {
   const keys = Object.keys(overrides);
-  style.textContent = keys.length
+  upsertStyle(doc, 'gui-overrides').textContent = keys.length
     ? `:root {\n${keys.map((k) => `  ${k}: ${overrides[k]};`).join('\n')}\n}`
     : '';
+}
+
+/** Insert or update a live layout override (`.slide { ... }`) inside a document. */
+export function applyLayout(doc: Document, layoutCss: string): void {
+  upsertStyle(doc, 'gui-layout').textContent = layoutCss;
 }

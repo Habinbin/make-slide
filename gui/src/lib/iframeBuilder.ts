@@ -18,7 +18,8 @@ function overrideBlock(overrides: Record<string, string>): string {
 export function buildSlideDoc(
   theme: ParsedTheme,
   slideHtml: string,
-  overrides: Record<string, string> = {}
+  overrides: Record<string, string> = {},
+  layoutCss = ''
 ): string {
   return `<!doctype html>
 <html lang="ko">
@@ -28,6 +29,7 @@ ${theme.headLinks}
 <style>
 ${theme.styleCss}
 ${overrideBlock(overrides)}
+${layoutCss}
 /* GUI canvas: a single slide is always visible, transitions disabled */
 .slide { transition: none !important; }
 </style>

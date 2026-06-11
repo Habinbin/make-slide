@@ -1,5 +1,6 @@
 import { useEditor } from '../state/store';
 import { THEMES } from '../data/themes';
+import { LAYOUTS } from '../data/layouts';
 
 // Friendly labels for well-known vars; anything else falls back to the raw
 // custom-property name so the editor adapts to each theme's own palette.
@@ -30,7 +31,9 @@ export function RightPanel() {
   const theme = useEditor((s) => s.theme);
   const themeId = useEditor((s) => s.themeId);
   const overrides = useEditor((s) => s.overrides);
+  const layoutId = useEditor((s) => s.layoutId);
   const selectTheme = useEditor((s) => s.selectTheme);
+  const selectLayout = useEditor((s) => s.selectLayout);
   const setOverride = useEditor((s) => s.setOverride);
 
   const fontBody = theme?.vars['--font-body'] ?? '';
@@ -57,6 +60,19 @@ export function RightPanel() {
             {fontMono && <div><span>Mono</span> {fontMono.split(',')[0].replace(/['"]/g, '')}</div>}
           </div>
         )}
+      </section>
+
+      <section className="panel-section">
+        <h2 className="panel-title">Layout</h2>
+        <p className="panel-hint">슬라이드 배치 구조를 전체 덱에 적용</p>
+        <select className="theme-select" value={layoutId} onChange={(e) => selectLayout(e.target.value)}>
+          <option value="">테마 기본</option>
+          {LAYOUTS.map((l) => (
+            <option key={l.id} value={l.id}>
+              {l.name} — {l.description}
+            </option>
+          ))}
+        </select>
       </section>
 
       <section className="panel-section">

@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { DEFAULT_THEME_ID } from '../data/themes';
+import { DEFAULT_LAYOUT_ID } from '../data/layouts';
 import { loadTheme, type ParsedTheme, type SlideTemplate } from '../lib/themeLoader';
+import { loadLayoutCss } from '../lib/layoutLoader';
 
 let uid = 0;
 const nextId = () => `slide-${++uid}`;
@@ -15,8 +17,11 @@ interface EditorState {
   deck: DeckSlide[];
   selected: number;
   overrides: Record<string, string>;
+  layoutId: string;
+  layoutCss: string;
 
   selectTheme: (id: string) => void;
+  selectLayout: (id: string) => void;
   selectSlide: (i: number) => void;
   addSlide: (tpl: SlideTemplate) => void;
   removeSlide: (i: number) => void;
@@ -34,6 +39,19 @@ export const useEditor = create<EditorState>((set, get) => ({
   deck: [],
   selected: 0,
   overrides: {},
+  layoutId: DEFAULT_LAYOUT_ID,
+  layoutCss: '',
+
+  selectLayout: (id) => {
+    set({ layoutId: id });
+    loadLayoutCss(id)
+      .then((css) => {
+        if (get().layoutId === id) set({ layoutCss: css });
+      })
+      .catch(() => {
+        if (get().layoutId === id) set({ layoutCss: '' });
+      });
+  },
 
   selectTheme: (id) => {
     set({ themeId: id, loading: true, error: null });

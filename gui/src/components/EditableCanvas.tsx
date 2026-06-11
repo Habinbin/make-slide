@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useEditor } from '../state/store';
 import { buildSlideDoc } from '../lib/iframeBuilder';
-import { markEditable, serializeSlide, applyOverrides } from '../lib/editable';
+import { markEditable, serializeSlide, applyOverrides, applyLayout } from '../lib/editable';
 import { ImagePicker } from './ImagePicker';
 
 const BASE_W = 1280;
@@ -12,6 +12,7 @@ export function EditableCanvas() {
   const deck = useEditor((s) => s.deck);
   const selected = useEditor((s) => s.selected);
   const overrides = useEditor((s) => s.overrides);
+  const layoutCss = useEditor((s) => s.layoutCss);
   const error = useEditor((s) => s.error);
   const updateSlideHtml = useEditor((s) => s.updateSlideHtml);
 
@@ -48,7 +49,7 @@ export function EditableCanvas() {
     if (!doc) return;
 
     doc.open();
-    doc.write(buildSlideDoc(theme, slide.html, overrides));
+    doc.write(buildSlideDoc(theme, slide.html, overrides, layoutCss));
     doc.close();
 
     const slideEl = doc.querySelector('.slide');
@@ -94,11 +95,16 @@ export function EditableCanvas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slideId, theme]);
 
-  // Live-apply CSS var overrides without rewriting the document.
+  // Live-apply CSS var overrides + layout without rewriting the document.
   useEffect(() => {
     const doc = iframeRef.current?.contentDocument;
     if (doc) applyOverrides(doc, overrides);
   }, [overrides, slideId, theme]);
+
+  useEffect(() => {
+    const doc = iframeRef.current?.contentDocument;
+    if (doc) applyLayout(doc, layoutCss);
+  }, [layoutCss, slideId, theme]);
 
   const applyImage = useCallback(
     (url: string) => {
