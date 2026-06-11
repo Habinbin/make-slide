@@ -4,8 +4,12 @@ import type { ParsedTheme } from './themeLoader';
 // renders a single make-slide slide using the theme's own stylesheet. CSS var
 // overrides from the design panel are appended as a final :root block so they
 // win the cascade.
-function activate(slideHtml: string): string {
-  return slideHtml.replace('class="slide"', 'class="slide active"');
+// Add "active" to the root slide element's class list, regardless of any
+// theme-specific modifier classes (e.g. "slide slide-dark title-slide").
+// Matching only `class="slide"` exactly would miss compound-class themes,
+// leaving the slide at opacity:0 (renders as a blank/black box).
+export function activate(slideHtml: string): string {
+  return slideHtml.replace(/class="([^"]*)"/, 'class="$1 active"');
 }
 
 function overrideBlock(overrides: Record<string, string>): string {
@@ -30,8 +34,10 @@ ${theme.headLinks}
 ${theme.styleCss}
 ${overrideBlock(overrides)}
 ${layoutCss}
-/* GUI canvas: a single slide is always visible, transitions disabled */
+/* GUI canvas: single slide always visible; reveal animations forced to their
+   end state so content shows instantly in the editor and thumbnails. */
 .slide { transition: none !important; }
+.slide .a { opacity: 1 !important; transform: none !important; animation: none !important; transition: none !important; }
 </style>
 </head>
 <body>

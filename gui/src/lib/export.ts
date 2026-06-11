@@ -4,8 +4,10 @@ import type { ParsedTheme } from './themeLoader';
 import type { DeckSlide } from '../state/store';
 import { getTextLeaves } from './editable';
 
+// Append "active" to the root slide's class list (handles compound-class
+// themes like "slide slide-dark"); exact `class="slide"` matching would miss them.
 function activate(html: string): string {
-  return html.replace('class="slide"', 'class="slide active"');
+  return html.replace(/class="([^"]*)"/, 'class="$1 active"');
 }
 
 function overrideStyle(overrides: Record<string, string>): string {
@@ -24,7 +26,7 @@ export function buildSingleDoc(
   overrides: Record<string, string> = {},
   layoutCss = ''
 ): string {
-  return `<!doctype html><html lang="ko"><head><meta charset="utf-8">${theme.headLinks}<style>${theme.styleCss}\n.slide{transition:none!important}\n${layoutCss}</style>${overrideStyle(
+  return `<!doctype html><html lang="ko"><head><meta charset="utf-8">${theme.headLinks}<style>${theme.styleCss}\n.slide{transition:none!important}\n.slide .a{opacity:1!important;transform:none!important;animation:none!important;transition:none!important}\n${layoutCss}</style>${overrideStyle(
     overrides
   )}</head><body><div class="deck">${activate(slideHtml)}</div></body></html>`;
 }
