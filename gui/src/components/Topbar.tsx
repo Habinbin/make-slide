@@ -14,6 +14,8 @@ export function Topbar() {
   const overrides = useEditor((s) => s.overrides);
   const layoutCss = useEditor((s) => s.layoutCss);
   const themeId = useEditor((s) => s.themeId);
+  const appTheme = useEditor((s) => s.appTheme);
+  const toggleAppTheme = useEditor((s) => s.toggleAppTheme);
   const [busy, setBusy] = useState<string | null>(null);
   const [server, setServer] = useState(false);
 
@@ -37,6 +39,13 @@ export function Topbar() {
       <span className="topbar-sub">GUI Editor</span>
       <span className="topbar-theme">테마: {themeId}</span>
       <div className="topbar-actions">
+        <button
+          className="icon-btn"
+          onClick={toggleAppTheme}
+          title={appTheme === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환'}
+        >
+          {appTheme === 'dark' ? '☀' : '🌙'}
+        </button>
         <label className="server-toggle" title="Vercel 서버리스(@sparticuz/chromium)로 고품질 렌더 — 배포 환경에서만 동작">
           <input type="checkbox" checked={server} onChange={(e) => setServer(e.target.checked)} />
           서버 렌더

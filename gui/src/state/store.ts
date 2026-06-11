@@ -20,6 +20,10 @@ interface EditorState {
   layoutId: string;
   layoutCss: string;
 
+  // UI chrome state (not part of the slide document).
+  appTheme: 'light' | 'dark';
+  vaultOpen: boolean;
+
   selectTheme: (id: string) => void;
   selectLayout: (id: string) => void;
   selectSlide: (i: number) => void;
@@ -29,7 +33,12 @@ interface EditorState {
   reorder: (from: number, to: number) => void;
   setOverride: (name: string, value: string) => void;
   updateSlideHtml: (id: string, html: string) => void;
+  toggleAppTheme: () => void;
+  toggleVault: () => void;
 }
+
+const storedAppTheme = (): 'light' | 'dark' =>
+  (typeof localStorage !== 'undefined' && localStorage.getItem('ms-app-theme')) === 'dark' ? 'dark' : 'light';
 
 export const useEditor = create<EditorState>((set, get) => ({
   themeId: DEFAULT_THEME_ID,
@@ -41,6 +50,21 @@ export const useEditor = create<EditorState>((set, get) => ({
   overrides: {},
   layoutId: DEFAULT_LAYOUT_ID,
   layoutCss: '',
+  appTheme: storedAppTheme(),
+  vaultOpen: true,
+
+  toggleAppTheme: () =>
+    set((s) => {
+      const appTheme = s.appTheme === 'dark' ? 'light' : 'dark';
+      try {
+        localStorage.setItem('ms-app-theme', appTheme);
+      } catch {
+        /* ignore */
+      }
+      return { appTheme };
+    }),
+
+  toggleVault: () => set((s) => ({ vaultOpen: !s.vaultOpen })),
 
   selectLayout: (id) => {
     set({ layoutId: id });
@@ -66,9 +90,13 @@ export const useEditor = create<EditorState>((set, get) => ({
                   const title = parsed.templates.find((t) => t.type === 'title') ?? parsed.templates[0];
                   return title ? [{ ...title, id: nextId() }] : [];
                 })()
-              : // Re-map each existing slide to the same-type template of the new theme.
+              : // Re-map each existing slide to the new theme. Prefer the same
+                // ordinal slot (keeps distinct slides distinct), then same type,
+                // else keep as-is.
                 s.deck.map((slide) => {
-                  const repl = parsed.templates.find((t) => t.type === slide.type);
+                  const repl =
+                    parsed.templates[slide.sourceIndex] ??
+                    parsed.templates.find((t) => t.type === slide.type);
                   return repl ? { ...repl, id: slide.id } : slide;
                 });
           return { theme: parsed, loading: false, overrides: {}, deck };

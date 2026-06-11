@@ -10,7 +10,6 @@ export function LeftPanel() {
   const overrides = useEditor((s) => s.overrides);
   const layoutCss = useEditor((s) => s.layoutCss);
   const selectSlide = useEditor((s) => s.selectSlide);
-  const addSlide = useEditor((s) => s.addSlide);
   const removeSlide = useEditor((s) => s.removeSlide);
   const duplicateSlide = useEditor((s) => s.duplicateSlide);
   const reorder = useEditor((s) => s.reorder);
@@ -55,19 +54,6 @@ export function LeftPanel() {
             )}
           </Droppable>
         </DragDropContext>
-      </section>
-
-      <section className="panel-section vault">
-        <h2 className="panel-title">Slide Vault</h2>
-        <p className="panel-hint">현재 테마 레이아웃 · 클릭하면 추가</p>
-        <div className="vault-list">
-          {theme?.templates.map((t) => (
-            <button key={t.id} className="vault-item" onClick={() => addSlide(t)} title={`${t.label} 추가`}>
-              <SlideFrame doc={buildSlideDoc(theme, t.html, overrides, layoutCss)} width={172} />
-              <span className="vault-label">{t.label}</span>
-            </button>
-          ))}
-        </div>
       </section>
     </aside>
   );

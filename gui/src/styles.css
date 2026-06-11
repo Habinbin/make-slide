@@ -1,4 +1,19 @@
+/* Light is the default app chrome; [data-app-theme="dark"] swaps the palette.
+   Component CSS only references these --ui-* tokens. */
 :root {
+  --ui-bg: #eef0f4;
+  --ui-panel: #ffffff;
+  --ui-panel-2: #f3f4f7;
+  --ui-border: #e1e4ea;
+  --ui-text: #1b1d22;
+  --ui-text-dim: #707682;
+  --ui-accent: #3b6cff;
+  --ui-hover: #d6d9e1;
+  --ui-canvas: radial-gradient(circle at 50% 35%, #ffffff 0%, #e7e9ee 100%);
+  --ui-shadow: 0 18px 50px rgba(20, 24, 40, 0.18);
+}
+
+[data-app-theme='dark'] {
   --ui-bg: #121317;
   --ui-panel: #1a1c22;
   --ui-panel-2: #20232b;
@@ -6,6 +21,9 @@
   --ui-text: #e6e8ee;
   --ui-text-dim: #8b8f9a;
   --ui-accent: #5b8cff;
+  --ui-hover: #3c414e;
+  --ui-canvas: radial-gradient(circle at 50% 40%, #1c1f27 0%, #0e0f13 100%);
+  --ui-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -22,12 +40,19 @@ body {
 
 /* Topbar */
 .topbar {
-  display: flex; align-items: baseline; gap: 14px;
+  display: flex; align-items: center; gap: 14px;
   height: 48px; padding: 0 18px;
   background: var(--ui-panel);
   border-bottom: 1px solid var(--ui-border);
   flex-shrink: 0;
 }
+.icon-btn {
+  height: 30px; width: 32px; padding: 0;
+  background: var(--ui-panel-2); color: var(--ui-text);
+  border: 1px solid var(--ui-border); border-radius: 7px;
+  font-size: 14px; cursor: pointer; line-height: 1;
+}
+.icon-btn:hover { border-color: var(--ui-hover); }
 .brand { font-weight: 700; font-size: 16px; letter-spacing: -0.2px; }
 .topbar-sub { color: var(--ui-text-dim); font-size: 12px; }
 .topbar-theme { margin-left: auto; color: var(--ui-text-dim); font-size: 12px; }
@@ -40,7 +65,7 @@ body {
   border: 1px solid var(--ui-border); border-radius: 7px;
   font-size: 12px; font-weight: 600; cursor: pointer;
 }
-.topbar-actions button:hover:not(:disabled) { border-color: #3c414e; }
+.topbar-actions button:hover:not(:disabled) { border-color: var(--ui-hover); }
 .topbar-actions button.primary { background: var(--ui-accent); border-color: var(--ui-accent); color: #fff; }
 .topbar-actions button:disabled { opacity: 0.4; cursor: default; }
 
@@ -71,7 +96,7 @@ body {
   background: var(--ui-panel-2);
   transition: border-color 0.12s;
 }
-.deck-item:hover { border-color: #3c414e; }
+.deck-item:hover { border-color: var(--ui-hover); }
 .deck-item.active { border-color: var(--ui-accent); box-shadow: 0 0 0 1px var(--ui-accent); }
 .deck-index {
   position: absolute; top: 4px; left: 4px; z-index: 2;
@@ -85,18 +110,40 @@ body {
   background: transparent; border: none; color: var(--ui-text-dim);
   cursor: pointer; font-size: 12px; width: 20px; height: 20px; border-radius: 4px;
 }
-.deck-actions button:hover:not(:disabled) { background: #2c2f38; color: var(--ui-text); }
+.deck-actions button:hover:not(:disabled) { background: var(--ui-hover); color: var(--ui-text); }
 .deck-actions button:disabled { opacity: 0.3; cursor: default; }
 
-/* Vault */
+/* Vault drawer (bottom) */
+.vault-drawer {
+  flex-shrink: 0;
+  background: var(--ui-panel);
+  border-top: 1px solid var(--ui-border);
+  display: flex; flex-direction: column;
+}
+.vault-drawer-head {
+  display: flex; align-items: center; gap: 10px;
+  height: 38px; padding: 0 16px;
+  background: var(--ui-panel); color: var(--ui-text);
+  border: none; cursor: pointer; text-align: left; width: 100%;
+}
+.vault-drawer-head:hover { background: var(--ui-panel-2); }
+.vault-chevron { font-size: 11px; color: var(--ui-text-dim); width: 12px; }
+.vault-drawer-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; }
+.vault-drawer-sub { font-size: 11px; color: var(--ui-text-dim); }
+.vault-drawer-body {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(208px, 1fr));
+  gap: 12px; padding: 12px 16px 16px;
+  max-height: 42vh; overflow-y: auto;
+  border-top: 1px solid var(--ui-border);
+}
 .vault-item {
   display: flex; flex-direction: column; gap: 6px;
   border: 1px solid var(--ui-border); border-radius: 8px;
   background: var(--ui-panel-2); cursor: pointer; overflow: hidden;
   padding: 0 0 6px; text-align: center;
-  transition: border-color 0.12s, transform 0.08s;
+  transition: border-color 0.12s, transform 0.08s, box-shadow 0.12s;
 }
-.vault-item:hover { border-color: var(--ui-accent); transform: translateY(-1px); }
+.vault-item:hover { border-color: var(--ui-accent); transform: translateY(-2px); box-shadow: var(--ui-shadow); }
 .vault-label { font-size: 11px; color: var(--ui-text-dim); }
 
 /* SlideFrame */
@@ -107,11 +154,10 @@ body {
 .canvas {
   flex: 1; min-width: 0;
   display: flex; align-items: center; justify-content: center;
-  background:
-    radial-gradient(circle at 50% 40%, #1c1f27 0%, #0e0f13 100%);
+  background: var(--ui-canvas);
   padding: 40px;
 }
-.canvas .slide-frame { box-shadow: 0 20px 60px rgba(0,0,0,0.5); border-radius: 6px; }
+.canvas .slide-frame { box-shadow: var(--ui-shadow); border-radius: 6px; }
 .canvas-msg { color: var(--ui-text-dim); font-size: 14px; }
 .canvas-msg.error { color: #ff6b6b; max-width: 60%; text-align: center; }
 

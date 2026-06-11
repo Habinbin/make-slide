@@ -8,6 +8,7 @@ export interface SlideTemplate {
   label: string;
   html: string; // outerHTML of the .slide element, sans "active"
   notes: string;
+  sourceIndex: number; // position within the theme's templates (remap fallback)
 }
 
 export interface ParsedTheme {
@@ -19,28 +20,89 @@ export interface ParsedTheme {
   templates: SlideTemplate[];
 }
 
-// Best-effort slide-type inference from descendant class names. Order matters:
-// the first matching selector wins.
-const TYPE_RULES: Array<{ sel: string; type: string; label: string }> = [
-  { sel: '.slide-title', type: 'title', label: 'Title' },
-  { sel: '.toc-list', type: 'agenda', label: 'Agenda' },
-  { sel: '.divider-number, .section-number', type: 'divider', label: 'Divider' },
-  { sel: '.slide-quote', type: 'quote', label: 'Quote' },
-  { sel: '.comparison', type: 'comparison', label: 'Comparison' },
-  { sel: '.steps, .flow', type: 'flow', label: 'Flow' },
-  { sel: '.cards', type: 'cards', label: 'Cards' },
-  { sel: '.bar-chart, .metrics, .chart', type: 'chart', label: 'Chart' },
-  { sel: '.code-container', type: 'code', label: 'Code' },
-  { sel: '.image-placeholder', type: 'image', label: 'Image' },
-  { sel: '.slide-closing', type: 'closing', label: 'Closing' },
-  { sel: '.content-body', type: 'content', label: 'Content' },
-];
+const TYPE_LABEL: Record<string, string> = {
+  title: 'Title',
+  agenda: 'Agenda',
+  divider: 'Divider',
+  content: 'Content',
+  quote: 'Quote',
+  comparison: 'Comparison',
+  flow: 'Flow',
+  cards: 'Cards',
+  chart: 'Chart',
+  code: 'Code',
+  image: 'Image',
+  closing: 'Closing',
+};
 
-function inferType(slide: Element, index: number): { type: string; label: string } {
-  for (const rule of TYPE_RULES) {
-    if (slide.querySelector(rule.sel)) return { type: rule.type, label: rule.label };
+// Map a slide-label comment ("<!-- Slide 3: Agenda / TOC -->") to a canonical type.
+function typeFromComment(slide: Element): string | null {
+  let n: Node | null = slide.previousSibling;
+  for (let i = 0; n && i < 4; i++, n = n.previousSibling) {
+    if (n.nodeType === 8) {
+      const t = (n.textContent ?? '').toLowerCase();
+      if (!/slide\s*\d/.test(t)) continue;
+      if (/title/.test(t)) return 'title';
+      if (/agenda|toc|contents/.test(t)) return 'agenda';
+      if (/divider|section/.test(t)) return 'divider';
+      if (/quote/.test(t)) return 'quote';
+      if (/compar|before|after/.test(t)) return 'comparison';
+      if (/flow|step|process|workflow/.test(t)) return 'flow';
+      if (/card|feature/.test(t)) return 'cards';
+      if (/chart|data|metric|stat/.test(t)) return 'chart';
+      if (/code/.test(t)) return 'code';
+      if (/image|placeholder|photo|visual/.test(t)) return 'image';
+      if (/closing|thank|end/.test(t)) return 'closing';
+      if (/content|body|text/.test(t)) return 'content';
+      return null;
+    }
   }
-  return { type: 'content', label: `Slide ${index + 1}` };
+  return null;
+}
+
+// Class-name hints unified across the differing theme vocabularies.
+function typeFromClass(slide: Element): string | null {
+  const has = (sel: string) => slide.matches(sel) || !!slide.querySelector(sel);
+  if (has('.slide-title, [class*="title-slide"]')) return 'title';
+  if (has('.slide-closing, [class*="closing-slide"], [class*="closing"]')) return 'closing';
+  if (has('.toc-list, [class*="toc"], [class*="agenda"]')) return 'agenda';
+  if (has('.code-container, [class*="code-block"], pre code[class*="language"]')) return 'code';
+  if (has('.image-placeholder, .img-placeholder, [class*="placeholder"]')) return 'image';
+  if (has('.comparison, [class*="comparison"], [class*="compare"]')) return 'comparison';
+  if (has('[class*="bar-chart"], [class*="bar-row"], [class*="chart"], [class*="metric"], [class*="kpi"], [class*="stat-"]'))
+    return 'chart';
+  if (has('.cards, [class*="card-grid"], [class*="cards"]')) return 'cards';
+  if (has('.steps, .flow, [class*="step"], [class*="flow"]')) return 'flow';
+  if (has('.slide-quote, [class*="quote"], [class*="blockquote"]')) return 'quote';
+  if (has('[class*="divider"], [class*="section-number"]')) return 'divider';
+  return null;
+}
+
+// Structural inference from the slide's actual DOM, independent of class names.
+function typeFromStructure(slide: Element, index: number, total: number): string {
+  if (slide.querySelector('pre, code[class*="language"]')) return 'code';
+  if (slide.querySelector('blockquote')) return 'quote';
+  if (slide.querySelector('[class*="bar"], [class*="chart"], svg, canvas')) return 'chart';
+  if (slide.querySelector('table')) return 'comparison';
+  if (slide.querySelector('img, [class*="placeholder"]')) return 'image';
+  // Two balanced columns of text → comparison.
+  if (slide.querySelectorAll('[class*="col"], [class*="column"]').length >= 2) return 'comparison';
+  const lis = slide.querySelectorAll('li');
+  if (lis.length >= 3) {
+    const numbered = Array.from(lis).every((li) => /^\s*\d/.test(li.textContent ?? ''));
+    return numbered ? 'agenda' : 'content';
+  }
+  if (index === 0) return 'title';
+  if (index === total - 1) return 'closing';
+  return 'content';
+}
+
+function inferType(slide: Element, index: number, total: number): { type: string; label: string } {
+  const type =
+    typeFromComment(slide) ??
+    typeFromClass(slide) ??
+    typeFromStructure(slide, index, total);
+  return { type, label: TYPE_LABEL[type] ?? 'Slide' };
 }
 
 function parseRootVars(styleCss: string): Record<string, string> {
@@ -71,15 +133,17 @@ export async function loadTheme(themeId: string): Promise<ParsedTheme> {
   const vars = parseRootVars(styleCss);
 
   const slideEls = Array.from(doc.querySelectorAll('.slide'));
+  const total = slideEls.length;
   const templates: SlideTemplate[] = slideEls.map((el, i) => {
+    const { type, label } = inferType(el, i, total);
     el.classList.remove('active');
-    const { type, label } = inferType(el, i);
     return {
       id: `${themeId}-${type}-${i}`,
       type,
       label,
       html: el.outerHTML,
       notes: el.getAttribute('data-notes') ?? '',
+      sourceIndex: i,
     };
   });
 

@@ -36,8 +36,10 @@ export function RightPanel() {
   const selectLayout = useEditor((s) => s.selectLayout);
   const setOverride = useEditor((s) => s.setOverride);
 
-  const fontBody = theme?.vars['--font-body'] ?? '';
-  const fontMono = theme?.vars['--font-mono'] ?? '';
+  // Themes name their font vars differently — pick the first that exists.
+  const pickVar = (names: string[]) => names.map((n) => theme?.vars[n]).find(Boolean) ?? '';
+  const fontBody = pickVar(['--font-body', '--font-ui', '--font-sans', '--font-serif']);
+  const fontMono = pickVar(['--font-mono', '--font-code']);
 
   const colorVars = Object.keys(theme?.vars ?? {}).filter(
     (name) => toHex((theme!.vars[name] ?? '').trim()) !== null

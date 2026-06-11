@@ -15,7 +15,10 @@ npm run build    # dist/ 로 정적 빌드 (themes/layouts/core 포함)
 
 ### Phase 1 — 에디터 셸
 - **에셋 파이프라인**: `vite-plugin-static-copy`로 상위 `../themes`, `../layouts`, `../core`를 `/themes/...` 절대경로로 dev 서빙 + 빌드 포함.
-- **3-패널 레이아웃**: 좌측(덱 썸네일 + Slide Vault) / 중앙(iframe 격리 캔버스) / 우측(테마 스위처 + 레이아웃 + CSS 변수 컬러).
+- **레이아웃**: 좌측(작업 중 덱 썸네일, 세로 스크롤) / 중앙(iframe 격리 캔버스) / 우측(테마 스위처 + 레이아웃 + CSS 변수 컬러) / **하단 Slide Vault 드로어**(전폭·세로 스크롤·토글 개폐, 열렸을 때만 렌더).
+- **앱 라이트/다크 모드**: 상단 ☀/🌙 토글, `[data-app-theme]` 기반, localStorage 저장(기본 라이트).
+- **테마 간 슬라이드 타입 추론**: 클래스명이 테마마다 달라(`themeLoader.ts`) 주석 라벨 → 통합 클래스 힌트 → DOM 구조(표/인용/코드/리스트/이미지/위치) 순으로 추론해 10개 테마 모두에서 Vault 라벨·테마 전환 리맵이 일관 동작.
+- **폰트 캐시 워밍**(`lib/fonts.ts`): 테마 폰트 링크를 부모 문서에 1회 주입해 다수 iframe 썸네일의 폰트 깨짐 방지.
 - 테마 변경 시 덱 슬라이드를 같은 타입의 새 템플릿으로 리매핑해 전체 재스타일.
 - **레이아웃 스위처**: 우측 패널 `Layout`에서 `/layouts/*`(Centered/Wide/Split/Editorial)를 테마처럼 선택. 각 레이아웃 `reference.html`의 `.slide` 배치 속성(display·정렬·padding·grid)을 추출해 전체 덱에 글로벌 오버라이드로 적용(`src/lib/layoutLoader.ts`). 캔버스·썸네일·익스포트(HTML/PDF/PPTX) 모두 반영.
 
